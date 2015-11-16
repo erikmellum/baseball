@@ -1,8 +1,17 @@
+/**
+ * @author Erik Mellum
+ * @created 11/15/15
+ * @modified 11/15/15
+ * @version 1.0
+ * @sources: retrosheet.org
+ * @description: baseball.js is a node script that will read in a text file
+ * called baseball1.txt formatted according to the guidelines set by
+ * retrosheet.org. It will use this data to simulate and tally baseball game
+ * winners according to the rules included in the Emerald Genius Questions.
+ */
 var fs = require('fs')
-var teams = {
-
-}
-var team_names = [];
+var teams = {}
+var team_names = [];//holds a set of team names, used to access teams object
 var Team = function(name, league){
   this.name = name;
   this.league = league;
@@ -10,56 +19,70 @@ var Team = function(name, league){
   this.losses = 0;
   this.ties = 0;
 }
+/**
+ * playGame is a function that takes a game with the format:
+ * {
+ *   visiting_team_name: 'NAME',
+ *   visiting_team_league: 'LEAGUE',
+ *   visiting_team_score: '010101110',
+ *   home_team_name: 'NAME',
+ *   home_team_league: 'LEAGUE',
+ *   home_team_score: '010101110'
+ * }
+ * Logic is applied to tally up the innings each team won, and select a winner
+ * loser, or tie if needbe, and increment the appropriate properties on the
+ * team object.
+ * @param game the game object containing the necessary properties.
+ *
+ */
 var playGame = function(game){
-  console.log("ASF")
   //check if the visiting team is in our teams object
   if(team_names.indexOf(game.visiting_team_name) == -1) {
-    team_names.push(game.visiting_team_name);
+    team_names.push(game.visiting_team_name);//add the key
+    //add the team to our teams object
     teams[game.visiting_team_name] = new Team(game.visiting_team_name, game.visiting_team_league)
   }
   //check if the home team is in our teams object
   if(team_names.indexOf(game.home_team_name) == -1) {
-    team_names.push(game.home_team_name);
+    team_names.push(game.home_team_name);//add the key
+    //add the team to our teams object
     teams[game.home_team_name] = new Team(game.home_team_name, game.home_team_league)
   }
-  var j = 0;
-  var k = 0;
-  var visiting_team_innings = 0;
-  var home_team_innings = 0;
+  var j = 0;//index into our home team score (per inning)
+  var k = 0;//index into our visiting team score (per inning)
+  var visiting_team_innings = 0;//count of innings won by visiting team
+  var home_team_innings = 0;//count of innings won by home team
   while(typeof(game.visiting_team_score[j]) !== 'undefined'){
-    var a = game.visiting_team_score;
-    var b = game.home_team_score;
+    var a = game.visiting_team_score;//shorter variable name
+    var b = game.home_team_score;//shorter variable name
     var htr = 0; //home team runs (one inning)
     var vtr = 0; //visiting team runs (one inning)
-    var str1 = '';
-    var str2 = '';
+    var str1 = '';//holds a score like (10) for the visiting team
+    var str2 = '';//holds a score like (10) for the home team
     if(b[j] == 'x') htr = 0; //if the home team didn't bat, give them 0 runs
-    if(a[k] == '('){
-      console.log("Parsing[k]: ", a[k])
+    if(a[k] == '('){ //special type of score with more than 1 digit
       k++;
-      while(a[k] !== ')'){
-        str1 += a[k];
+      while(a[k] !== ')'){ //loop until we reach the other fencepost
+        str1 += a[k]; //build up our number as a string
         k++;
       }
-      vtr = parseInt(str1);
+      vtr = parseInt(str1);//turn the string into a real number
     }
     else{
-      vtr = a[k];
+      vtr = a[k];//otherwise it was a single digit
     }
-    if(b[j] == '('){
-      console.log("Parsing[j]: ", b[j])
+    if(b[j] == '('){//special type of score with more than 1 digit
       j++;
-      while(b[j] !== ')'){
-        str2 =+ b[j];
+      while(b[j] !== ')'){//loop until we reach the other fencepost
+        str2 =+ b[j];//build up our number as a string
         j++;
       }
-      htr = parseInt(str2)
+      htr = parseInt(str2)//turn the string into a real number
     }
     else{
-      htr = b[j];
+      htr = b[j];//otherwise it was a single digit
     }
-    console.log("VTR: " + vtr)
-    console.log("HTR: " + htr)
+    //whoever had more runs wins the inning
     if(vtr > htr) visiting_team_innings++;
     else if(vtr < htr) home_team_innings++;
     else //do nothing, tied inning
@@ -67,8 +90,7 @@ var playGame = function(game){
     j++;
     k++;
   }
-  console.log("HTI: " + home_team_innings);
-  console.log("VTI: " + visiting_team_innings);
+  //check to see who won more innings, tally wins, ties, and losses
   if(visiting_team_innings > home_team_innings) {
     teams[game.visiting_team_name].wins++;
     teams[game.home_team_name].losses++;
@@ -82,6 +104,14 @@ var playGame = function(game){
     teams[game.home_team_name].ties++;
   }
 }
+/**
+ * processData is a function responsible for iterating through a text file of
+ * baseball scores, and creating game objects for each record in the text file.
+ * comma counts are used to identify certain fields. Each created game will then
+ * be "played". Basically this means the now cleanly formatted data is parsed to
+ * determine a winner, loser, or tie if need be.
+ * @param data, a string containing the data file to be processed.
+ */
 var processData = function(data){
   var i = 0;
   while(data[i] !== '' && typeof(data[i]) !== 'undefined'){
@@ -94,13 +124,11 @@ var processData = function(data){
       home_team_league: '',
       home_team_score: ''
     }
-    console.log("TESTEE")
     while(data[i] !== '\n'){
       if(commaCount == 3){
         //read in visiting team name
         while(data[i] !== ','){
           game.visiting_team_name += data[i];
-          console.log("VTN: ", data[i])
           i++;
         }
         i++;
@@ -108,7 +136,6 @@ var processData = function(data){
         //read in visiting league name
         while(data[i] !== ','){
           game.visiting_team_league += data[i];
-          console.log("VTL: ", data[i])
           i++;
         }
       }
@@ -116,7 +143,6 @@ var processData = function(data){
         //read in home team name
         while(data[i] !== ','){
           game.home_team_name += data[i];
-          console.log("HTN: ", data[i])
           i++;
         }
         i++;
@@ -124,7 +150,6 @@ var processData = function(data){
         //read in visiting league name
         while(data[i] !== ','){
           game.home_team_league += data[i];
-          console.log("HTL: ", data[i])
           i++;
         }
       }
@@ -132,7 +157,6 @@ var processData = function(data){
         //read in visiting team name
         while(data[i] !== ','){
           game.visiting_team_score += data[i];
-          console.log("VTS: ", data[i])
           i++;
         }
         i++;
@@ -140,15 +164,8 @@ var processData = function(data){
         //read in visiting league name
         while(data[i] !== ','){
           game.home_team_score += data[i];
-          console.log("HTS: ", data[i])
           i++;
         }
-        console.log("VTSC: ", game.visiting_team_score.replace(/"/g,''))
-        console.log("VTNC: ", game.visiting_team_name.replace(/"/g,''))
-        console.log("VTLC: ", game.visiting_team_league.replace(/"/g,''))
-        console.log("HTSC: ", game.home_team_score.replace(/"/g,''))
-        console.log("HTNC: ", game.home_team_name.replace(/"/g,''))
-        console.log("HTLC: ", game.home_team_league.replace(/"/g,''))
       }
       if(data[i] == ',') commaCount++;
       i++;
